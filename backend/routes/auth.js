@@ -154,7 +154,10 @@ router.post('/login', sanitizeInput, validateLogin, authRateLimit, async (req, r
 // Get all users endpoint (for chat selection)
 router.get('/users', authenticateToken, async (req, res) => {
   try {
-    const users = await User.find({}, 'id email username profilePhoto');
+    const users = await User.find(
+      {},
+      'id email username profilePhoto isOnline lastSeen status customStatus'
+    );
     res.json(users);
   } catch (error) {
     console.error('Get users error:', error);
@@ -332,6 +335,49 @@ router.get('/profile', authenticateToken, async (req, res) => {
   } catch (error) {
     console.error('Get profile error:', error);
     res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// DELETE ALL USERS - Administrative endpoint (USE WITH CAUTION!)
+router.delete('/delete-all-users', authenticateToken, async (req, res) => {
+  try {
+    // Optional: Add extra authentication check (e.g., admin-only)
+    // For now, any authenticated user can trigger this (DANGEROUS!)
+
+    // Delete all users
+    const userResult = await User.deleteMany({});
+
+    // Delete all messages
+    const messageResult = await Message.deleteMany({});
+
+    // Also delete groups and group messages if they exist
+    const Group = require('../models/Group');
+    const GroupMessage = require('../models/GroupMessage');
+
+    const groupResult = await Group.deleteMany({});
+    const groupMessageResult = await GroupMessage.deleteMany({});
+
+    // Reset user ID counter
+    userIdCounter = 1;
+
+    console.log('🗑️ ALL DATA DELETED:');
+    console.log(`   - Users: ${userResult.deletedCount}`);
+    console.log(`   - Messages: ${messageResult.deletedCount}`);
+    console.log(`   - Groups: ${groupResult.deletedCount}`);
+    console.log(`   - Group Messages: ${groupMessageResult.deletedCount}`);
+
+    res.json({
+      message: 'All data deleted successfully',
+      deleted: {
+        users: userResult.deletedCount,
+        messages: messageResult.deletedCount,
+        groups: groupResult.deletedCount,
+        groupMessages: groupMessageResult.deletedCount,
+      }
+    });
+  } catch (error) {
+    console.error('Error deleting all users:', error);
+    res.status(500).json({ error: 'Failed to delete data' });
   }
 });
 

@@ -12,6 +12,7 @@ import '../models/message_model.dart';
 import '../models/user_model.dart';
 import '../services/auth_service.dart';
 import '../services/socket_service.dart';
+import '../config/app_config.dart';
 
 class ChatController extends GetxController {
   final AuthService _authService = AuthService();
@@ -35,6 +36,14 @@ class ChatController extends GetxController {
   var isPausedAudio = false.obs;
   var audioPosition = Duration.zero.obs;
   var audioDuration = Duration.zero.obs;
+  var isTyping = false.obs;
+  var otherUserTyping = false.obs;
+  var selectedMessageForReply = Rxn<Message>();
+  var selectedMessageForEdit = Rxn<Message>();
+  var editMessageText = ''.obs;
+  var searchQuery = ''.obs;
+  var filteredMessages = <Message>[].obs;
+  Timer? _typingTimer;
 
   void scrollToBottom() {
     // Use multiple attempts with jumpTo for immediate scrolling
@@ -66,22 +75,119 @@ class ChatController extends GetxController {
       _socketService = SocketService();
       _socketService.connect(token);
 
+      // Listen for received messages
       _socketService.onReceiveMessage((message) {
-        messages.add(message);
-        // Scroll after a short delay to ensure UI updates
-        Future.delayed(
-          const Duration(milliseconds: 100),
-          () => scrollToBottom(),
-        );
+        // Check if message already exists to prevent duplication
+        final existingIndex = messages.indexWhere((m) => m.id == message.id);
+        if (existingIndex == -1) {
+          // Mark as delivered when received
+          _socketService.markMessageDelivered(message.id);
+
+          messages.add(message);
+          _applySearchFilter();
+          Future.delayed(
+            const Duration(milliseconds: 100),
+            () => scrollToBottom(),
+          );
+        }
       });
 
+      // Listen for sent messages
       _socketService.onMessageSent((message) {
-        messages.add(message);
-        // Scroll after a short delay to ensure UI updates
-        Future.delayed(
-          const Duration(milliseconds: 100),
-          () => scrollToBottom(),
-        );
+        // Check if message already exists to prevent duplication
+        final existingIndex = messages.indexWhere((m) => m.id == message.id);
+        if (existingIndex == -1) {
+          messages.add(message);
+          _applySearchFilter();
+          Future.delayed(
+            const Duration(milliseconds: 100),
+            () => scrollToBottom(),
+          );
+        }
+      });
+
+      // Listen for message status updates
+      _socketService.onMessageStatusUpdate((data) {
+        final messageId = data['messageId'] as String;
+        final status = data['status'] as String;
+
+        final index = messages.indexWhere((m) => m.id == messageId);
+        if (index != -1) {
+          messages[index] = messages[index].copyWith(
+            status: status,
+            deliveredAt: data['deliveredAt'],
+            readAt: data['readAt'],
+          );
+          messages.refresh();
+        }
+      });
+
+      // Listen for typing indicator
+      _socketService.onUserTyping((data) {
+        final userId = data['userId'] as int;
+        final isTypingNow = data['isTyping'] as bool;
+
+        if (chatUser.value != null && userId == chatUser.value!.id) {
+          otherUserTyping.value = isTypingNow;
+        }
+      });
+
+      // Listen for message edits
+      _socketService.onMessageEdited((editedMessage) {
+        final index = messages.indexWhere((m) => m.id == editedMessage.id);
+        if (index != -1) {
+          messages[index] = editedMessage;
+          messages.refresh();
+          _applySearchFilter();
+        }
+      });
+
+      // Listen for message deletions
+      _socketService.onMessageDeleted((data) {
+        final messageId = data['messageId'] as String;
+        final deleteForEveryone = data['deleteForEveryone'] as bool;
+
+        if (deleteForEveryone) {
+          messages.removeWhere((m) => m.id == messageId);
+        } else {
+          final index = messages.indexWhere((m) => m.id == messageId);
+          if (index != -1 && currentUser.value != null) {
+            final updatedDeletedFor = List<int>.from(messages[index].deletedFor);
+            if (!updatedDeletedFor.contains(currentUser.value!.id)) {
+              updatedDeletedFor.add(currentUser.value!.id);
+            }
+            messages[index] = messages[index].copyWith(deletedFor: updatedDeletedFor);
+            messages.refresh();
+          }
+        }
+        _applySearchFilter();
+      });
+
+      // Listen for reactions
+      _socketService.onReactionAdded((data) {
+        final messageId = data['messageId'] as String;
+        final reactions = (data['reactions'] as List)
+            .map((r) => MessageReaction.fromJson(r))
+            .toList();
+
+        final index = messages.indexWhere((m) => m.id == messageId);
+        if (index != -1) {
+          messages[index] = messages[index].copyWith(reactions: reactions);
+          messages.refresh();
+        }
+      });
+
+      _socketService.onReactionRemoved((data) {
+        final messageId = data['messageId'] as String;
+        final reactions = (data['reactions'] as List)
+            .map((r) => MessageReaction.fromJson(r))
+            .toList();
+
+        final index = messages.indexWhere((m) => m.id == messageId);
+        if (index != -1) {
+          messages[index] = messages[index].copyWith(reactions: reactions);
+          messages.refresh();
+        }
       });
     }
   }
@@ -101,7 +207,7 @@ class ChatController extends GetxController {
 
       final response = await http.get(
         Uri.parse(
-          'http://192.168.1.6:3000/api/auth/messages/${chatUser.value!.id}',
+          '${AppConfig.apiBaseUrl}/messages/${chatUser.value!.id}',
         ),
         headers: {
           'Authorization': 'Bearer $token',
@@ -242,7 +348,7 @@ class ChatController extends GetxController {
       } else {
         // Start new playback
         isPlayingAudio.value = true;
-        await _audioPlayer.setUrl('http://192.168.1.6:3000$url');
+        await _audioPlayer.setUrl(AppConfig.getMediaUrl(url));
         await _audioPlayer.play();
       }
 
@@ -324,9 +430,194 @@ class ChatController extends GetxController {
         text,
         mediaUrl: mediaUrl,
         mediaType: mediaType,
+        replyTo: selectedMessageForReply.value?.id,
       );
       messageText.value = '';
+      selectedMessageForReply.value = null;
+
+      // Stop typing indicator
+      if (isTyping.value) {
+        isTyping.value = false;
+        _socketService.sendTypingIndicator(chatUser.value!.id, false);
+      }
     }
+  }
+
+  // Mark messages as read when user views them
+  void markMessagesAsRead() {
+    if (chatUser.value == null || currentUser.value == null) return;
+
+    for (var message in messages) {
+      if (message.receiverId == currentUser.value!.id &&
+          message.status != 'read') {
+        _socketService.markMessageRead(message.id);
+      }
+    }
+  }
+
+  // Typing indicator
+  void onTextChanged(String text) {
+    messageText.value = text;
+
+    if (chatUser.value == null) return;
+
+    if (text.isNotEmpty && !isTyping.value) {
+      isTyping.value = true;
+      _socketService.sendTypingIndicator(chatUser.value!.id, true);
+    }
+
+    // Cancel previous timer
+    _typingTimer?.cancel();
+
+    // Set new timer to stop typing indicator after 2 seconds of inactivity
+    _typingTimer = Timer(const Duration(seconds: 2), () {
+      if (isTyping.value) {
+        isTyping.value = false;
+        _socketService.sendTypingIndicator(chatUser.value!.id, false);
+      }
+    });
+  }
+
+  // Reply to message
+  void replyToMessage(Message message) {
+    selectedMessageForReply.value = message;
+  }
+
+  void cancelReply() {
+    selectedMessageForReply.value = null;
+  }
+
+  // Edit message
+  void editMessage(Message message) {
+    if (currentUser.value == null || message.senderId != currentUser.value!.id) {
+      Get.snackbar(
+        'Error',
+        'You can only edit your own messages',
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
+      return;
+    }
+
+    selectedMessageForEdit.value = message;
+    editMessageText.value = message.text;
+  }
+
+  void cancelEdit() {
+    selectedMessageForEdit.value = null;
+    editMessageText.value = '';
+  }
+
+  Future<void> saveEditedMessage() async {
+    if (selectedMessageForEdit.value == null) return;
+
+    final newText = editMessageText.value.trim();
+    if (newText.isEmpty) {
+      Get.snackbar(
+        'Error',
+        'Message cannot be empty',
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
+      return;
+    }
+
+    _socketService.editMessage(selectedMessageForEdit.value!.id, newText);
+    cancelEdit();
+  }
+
+  // Delete message
+  void deleteMessage(Message message, {bool deleteForEveryone = false}) {
+    if (currentUser.value == null) return;
+
+    if (deleteForEveryone && message.senderId != currentUser.value!.id) {
+      Get.snackbar(
+        'Error',
+        'You can only delete your own messages for everyone',
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
+      return;
+    }
+
+    Get.defaultDialog(
+      title: 'Delete Message',
+      middleText: deleteForEveryone
+          ? 'Delete this message for everyone?'
+          : 'Delete this message for you?',
+      textConfirm: 'Delete',
+      textCancel: 'Cancel',
+      confirmTextColor: Colors.white,
+      onConfirm: () {
+        _socketService.deleteMessage(message.id, deleteForEveryone);
+        Get.back();
+      },
+    );
+  }
+
+  // Reactions
+  void toggleReaction(Message message, String emoji) {
+    if (currentUser.value == null) return;
+
+    // Check if user already reacted with this emoji
+    final existingReaction = message.reactions.firstWhereOrNull(
+      (r) => r.userId == currentUser.value!.id,
+    );
+
+    if (existingReaction != null && existingReaction.emoji == emoji) {
+      // Remove reaction
+      _socketService.removeReaction(message.id);
+    } else {
+      // Add/change reaction
+      _socketService.addReaction(message.id, emoji);
+    }
+  }
+
+  // Search messages
+  void searchMessages(String query) {
+    searchQuery.value = query;
+    _applySearchFilter();
+  }
+
+  void _applySearchFilter() {
+    if (searchQuery.value.isEmpty) {
+      filteredMessages.value = messages
+          .where((m) => !m.deletedFor.contains(currentUser.value?.id ?? 0))
+          .toList();
+    } else {
+      filteredMessages.value = messages
+          .where((m) =>
+              !m.deletedFor.contains(currentUser.value?.id ?? 0) &&
+              m.text.toLowerCase().contains(searchQuery.value.toLowerCase()))
+          .toList();
+    }
+  }
+
+  void clearSearch() {
+    searchQuery.value = '';
+    _applySearchFilter();
+  }
+
+  // Get display messages (filtered by deletedFor and search)
+  List<Message> get displayMessages {
+    if (currentUser.value == null) return [];
+
+    var msgs = messages.where((m) {
+      // Filter out deleted messages
+      if (m.deletedForEveryone) return false;
+      if (m.deletedFor.contains(currentUser.value!.id)) return false;
+      return true;
+    }).toList();
+
+    // Apply search filter
+    if (searchQuery.value.isNotEmpty) {
+      msgs = msgs
+          .where((m) =>
+              m.text.toLowerCase().contains(searchQuery.value.toLowerCase()))
+          .toList();
+    }
+
+    return msgs;
   }
 
   Future<String?> uploadFile(File file, String type) async {
@@ -336,7 +627,7 @@ class ChatController extends GetxController {
 
       var request = http.MultipartRequest(
         'POST',
-        Uri.parse('http://192.168.1.6:3000/api/auth/upload'),
+        Uri.parse('${AppConfig.apiBaseUrl}/upload'),
       );
 
       request.headers['Authorization'] = 'Bearer $token';
@@ -359,7 +650,11 @@ class ChatController extends GetxController {
 
   @override
   void onClose() {
+    _typingTimer?.cancel();
+    _socketService.removeAllListeners();
     _socketService.disconnect();
+    _audioPlayer.dispose();
+    _audioRecorder.dispose();
     super.onClose();
   }
 }

@@ -82,7 +82,7 @@ class AuthController extends GetxController {
           _scheduleAutoLogout();
         }
 
-        Get.offNamed('/users');
+        Get.offNamed('/home');
       } else {
         Get.snackbar(
           'Error',

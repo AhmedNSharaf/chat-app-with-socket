@@ -19,7 +19,7 @@ class AuthFormField extends StatefulWidget {
     Key? key,
     required this.controller,
     required this.labelText,
-    this.hintText,
+    required this.hintText,
     this.obscureText = false,
     this.keyboardType = TextInputType.text,
     this.validator,
@@ -54,13 +54,18 @@ class _AuthFormFieldState extends State<AuthFormField> {
       maxLength: widget.maxLength,
       maxLines: widget.maxLines,
       decoration: InputDecoration(
-        labelText: widget.labelText,
         hintText: widget.hintText,
-        prefixIcon: widget.prefixIcon != null ? Icon(widget.prefixIcon) : null,
+        hintStyle: TextStyle(fontSize: 14.sp, color: Colors.white70),
+        prefixIcon: widget.prefixIcon != null
+            ? Icon(widget.prefixIcon, color: Colors.white70)
+            : null,
         suffixIcon: widget.obscureText
             ? IconButton(
                 icon: Icon(
-                  _obscureText ? Icons.visibility : Icons.visibility_off,
+                  !_obscureText
+                      ? Icons.visibility_outlined
+                      : Icons.visibility_off_outlined,
+                  color: Colors.white70,
                 ),
                 onPressed: () {
                   setState(() {
@@ -69,27 +74,16 @@ class _AuthFormFieldState extends State<AuthFormField> {
                 },
               )
             : widget.suffixIcon,
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12.r)),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12.r),
-          borderSide: BorderSide(color: Colors.grey.shade300),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12.r),
-          borderSide: BorderSide(color: Theme.of(context).primaryColor),
-        ),
-        errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12.r),
-          borderSide: BorderSide(color: Colors.red),
-        ),
-        focusedErrorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12.r),
-          borderSide: BorderSide(color: Colors.red),
-        ),
-        filled: true,
-        fillColor: Colors.grey.shade50,
+        border: InputBorder.none,
+        enabledBorder: InputBorder.none,
+        focusedBorder: InputBorder.none,
+        errorBorder: InputBorder.none,
+        focusedErrorBorder: InputBorder.none,
+        disabledBorder: InputBorder.none,
+        filled: false,
         contentPadding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 16.h),
       ),
+      style: const TextStyle(color: Colors.white),
       validator: widget.validator,
       onChanged: widget.onChanged,
     );

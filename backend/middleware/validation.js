@@ -76,10 +76,10 @@ const validatePasswordReset = (req, res, next) => {
 };
 
 const sanitizeInput = (req, res, next) => {
-  // Sanitize string inputs
+  // Trim string inputs (removed HTML escaping as it should be done on output, not input)
   const sanitizeString = (str) => {
     if (typeof str !== 'string') return str;
-    return validator.escape(str.trim());
+    return str.trim();
   };
 
   // Sanitize request body

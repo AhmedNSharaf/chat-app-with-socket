@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_app/screens/chat_screen_new.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
 import 'screens/splash_screen.dart';
@@ -6,8 +7,13 @@ import 'screens/login_screen.dart';
 import 'screens/register_screen.dart';
 import 'screens/forgot_password_screen.dart';
 import 'screens/users_list_screen.dart';
-import 'screens/chat_screen.dart';
 import 'screens/profile_screen.dart';
+import 'screens/groups_list_screen.dart';
+import 'screens/group_chat_screen.dart';
+import 'screens/group_info_screen.dart';
+import 'screens/create_group_screen.dart';
+import 'screens/home_screen.dart';
+import 'screens/calculator_screen.dart';
 
 void main() {
   runApp(const MyApp());
@@ -31,11 +37,12 @@ class MyApp extends StatelessWidget {
             appBarTheme: AppBarTheme(
               backgroundColor: Colors.white,
               surfaceTintColor: Colors.white,
+              iconTheme: IconThemeData(color: Colors.white),
             ),
             textSelectionTheme: TextSelectionThemeData(
-              cursorColor: Colors.green,
-              selectionColor: Colors.green.withOpacity(0.3),
-              selectionHandleColor: Colors.green,
+              cursorColor: Colors.white,
+              selectionColor: Colors.white.withOpacity(0.3),
+              selectionHandleColor: Colors.white,
             ),
             bottomAppBarTheme: BottomAppBarThemeData(
               color: Colors.white,
@@ -54,8 +61,18 @@ class MyApp extends StatelessWidget {
               page: () => ForgotPasswordScreen(),
             ),
             GetPage(name: '/users', page: () => UsersListScreen()),
-            GetPage(name: '/chat', page: () => ChatScreen()),
+            GetPage(name: '/chat', page: () => ChatScreenNew()),
             GetPage(name: '/profile', page: () => ProfileScreen()),
+            GetPage(name: '/groups', page: () => GroupsListScreen()),
+            GetPage(name: '/group-chat', page: () => GroupChatScreen()),
+            GetPage(name: '/group-info', page: () => GroupInfoScreen()),
+            GetPage(
+              name: '/create-group',
+              page: () => const CreateGroupScreen(),
+            ),
+            GetPage(name: '/edit-group', page: () => const CreateGroupScreen()),
+            GetPage(name: '/home', page: () => HomeScreen()),
+            GetPage(name: '/calculator', page: () => const CalculatorScreen()),
           ],
         );
       },

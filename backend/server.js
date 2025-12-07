@@ -5,6 +5,7 @@ const socketIo = require('socket.io');
 const cors = require('cors');
 const mongoose = require('mongoose');
 const { router } = require('./routes/auth');
+const groupRoutes = require('./routes/groups');
 const { handleSocketConnection } = require('./socket');
 
 const app = express();
@@ -32,6 +33,7 @@ app.use('/api/', apiRateLimit);
 
 // Routes
 app.use('/api/auth', router);
+app.use('/api/groups', groupRoutes);
 
 // Serve uploaded files statically
 app.use('/uploads', express.static('uploads'));

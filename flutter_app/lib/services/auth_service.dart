@@ -3,10 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/user_model.dart';
+import '../config/app_config.dart';
 
 class AuthService {
-  static const String baseUrl =
-      'http://192.168.1.6:3000/api/auth'; // Your computer's IP address for physical device
+  static const String baseUrl = AppConfig.apiBaseUrl;
 
   // Register user
   Future<Map<String, dynamic>> register(

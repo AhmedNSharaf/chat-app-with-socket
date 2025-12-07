@@ -15,7 +15,15 @@ const userSchema = new mongoose.Schema({
   resetTokenExpiry: { type: Date, default: null },
   emailVerified: { type: Boolean, default: false },
   emailVerificationToken: { type: String, default: null },
-  refreshTokens: [{ type: String }]
+  refreshTokens: [{ type: String }],
+
+  // Presence & Status
+  isOnline: { type: Boolean, default: false },
+  lastSeen: { type: Date, default: null },
+  status: { type: String, enum: ['online', 'offline', 'away', 'busy'], default: 'offline' },
+  customStatus: { type: String, default: null },
+  statusUpdatedAt: { type: Date, default: null },
+  socketId: { type: String, default: null }
 }, {
   timestamps: true
 });

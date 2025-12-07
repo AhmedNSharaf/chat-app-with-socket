@@ -6,6 +6,7 @@ import '../controllers/chat_controller.dart';
 import '../controllers/auth_controller.dart';
 import '../models/user_model.dart';
 import '../models/message_model.dart';
+import '../config/app_config.dart';
 
 class ChatScreen extends StatelessWidget {
   ChatScreen({super.key});
@@ -30,7 +31,7 @@ class ChatScreen extends StatelessWidget {
               backgroundColor: Colors.grey[600],
               backgroundImage: chatUser.profilePhoto != null
                   ? NetworkImage(
-                      'http://192.168.1.6:3000${chatUser.profilePhoto}',
+                      AppConfig.getMediaUrl(chatUser.profilePhoto),
                     )
                   : null,
               child: chatUser.profilePhoto == null
@@ -311,7 +312,7 @@ class ChatScreen extends StatelessWidget {
         child: ClipRRect(
           borderRadius: BorderRadius.circular(8.r),
           child: Image.network(
-            'http://192.168.1.6:3000${message.mediaUrl}',
+            AppConfig.getMediaUrl(message.mediaUrl),
             height: 200.h,
             width: double.infinity,
             fit: BoxFit.cover,
@@ -558,54 +559,54 @@ class ChatScreen extends StatelessWidget {
     );
   }
 
-  void _startRecordingLongPress(BuildContext context) {
-    _chatController.startRecording();
-    // Show a simple overlay instead of full dialog for long press
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (BuildContext context) {
-        return GestureDetector(
-          onTap: () {
-            Navigator.pop(context);
-            _chatController.stopRecording();
-            _chatController.sendMessage();
-          },
-          child: Container(
-            color: Colors.black54,
-            child: Center(
-              child: Container(
-                padding: EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.mic, size: 48, color: Colors.red),
-                    SizedBox(height: 10),
-                    Obx(
-                      () => Text(
-                        '${_chatController.recordingDuration.value ~/ 60}:${(_chatController.recordingDuration.value % 60).toString().padLeft(2, '0')}',
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                    SizedBox(height: 10),
-                    Text(
-                      'Recording... Tap to send',
-                      style: TextStyle(fontSize: 16),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        );
-      },
-    );
-  }
+  // void _startRecordingLongPress(BuildContext context) {
+  //   _chatController.startRecording();
+  //   // Show a simple overlay instead of full dialog for long press
+  //   showDialog(
+  //     context: context,
+  //     barrierDismissible: false,
+  //     builder: (BuildContext context) {
+  //       return GestureDetector(
+  //         onTap: () {
+  //           Navigator.pop(context);
+  //           _chatController.stopRecording();
+  //           _chatController.sendMessage();
+  //         },
+  //         child: Container(
+  //           color: Colors.black54,
+  //           child: Center(
+  //             child: Container(
+  //               padding: EdgeInsets.all(20),
+  //               decoration: BoxDecoration(
+  //                 color: Colors.white,
+  //                 borderRadius: BorderRadius.circular(20),
+  //               ),
+  //               child: Column(
+  //                 mainAxisSize: MainAxisSize.min,
+  //                 children: [
+  //                   Icon(Icons.mic, size: 48, color: Colors.red),
+  //                   SizedBox(height: 10),
+  //                   Obx(
+  //                     () => Text(
+  //                       '${_chatController.recordingDuration.value ~/ 60}:${(_chatController.recordingDuration.value % 60).toString().padLeft(2, '0')}',
+  //                       style: TextStyle(
+  //                         fontSize: 20,
+  //                         fontWeight: FontWeight.bold,
+  //                       ),
+  //                     ),
+  //                   ),
+  //                   SizedBox(height: 10),
+  //                   Text(
+  //                     'Recording... Tap to send',
+  //                     style: TextStyle(fontSize: 16),
+  //                   ),
+  //                 ],
+  //               ),
+  //             ),
+  //           ),
+  //         ),
+  //       );
+  //     },
+  //   );
+  // }
 }

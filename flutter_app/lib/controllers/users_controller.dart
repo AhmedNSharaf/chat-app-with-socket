@@ -4,9 +4,12 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import '../models/user_model.dart';
 import '../services/auth_service.dart';
+import '../config/app_config.dart';
+import '../services/socket_service.dart';
 
 class UsersController extends GetxController {
   final AuthService _authService = AuthService();
+  late SocketService _socketService;
 
   var isLoading = false.obs;
   var users = <User>[].obs;
@@ -16,7 +19,73 @@ class UsersController extends GetxController {
   @override
   void onInit() {
     super.onInit();
+    _initializeSocket();
     fetchUsers();
+  }
+
+  void _initializeSocket() async {
+    final token = await _authService.getToken();
+    if (token != null) {
+      _socketService = SocketService();
+      _socketService.connect(token);
+
+      // Listen for user status changes
+      _socketService.onUserStatusChanged((data) {
+        final userId = data['userId'] as int;
+        final isOnline = data['isOnline'] as bool?;
+        final status = data['status'] as String?;
+        final lastSeen = data['lastSeen'] as String?;
+        final customStatus = data['customStatus'] as String?;
+
+        // Update user in list
+        final index = users.indexWhere((u) => u.id == userId);
+        if (index != -1) {
+          users[index] = users[index].copyWith(
+            isOnline: isOnline,
+            status: status,
+            lastSeen: lastSeen,
+            customStatus: customStatus,
+          );
+          users.refresh();
+        }
+      });
+
+      // Listen for received messages to update last message and reorder
+      _socketService.onReceiveMessage((message) {
+        final messageText = message.text.isEmpty && message.mediaType != null
+            ? _getMediaTypeText(message.mediaType!)
+            : message.text;
+        _updateLastMessageAndReorder(
+          message.senderId,
+          messageText,
+          message.timestamp,
+        );
+      });
+
+      // Listen for sent messages to update last message and reorder
+      _socketService.onMessageSent((message) {
+        final messageText = message.text.isEmpty && message.mediaType != null
+            ? _getMediaTypeText(message.mediaType!)
+            : message.text;
+        _updateLastMessageAndReorder(
+          message.receiverId,
+          messageText,
+          message.timestamp,
+        );
+      });
+    }
+  }
+
+  void _updateLastMessageAndReorder(int userId, String messageText, String timestamp) {
+    // Update last message for this user
+    lastMessages[userId] = {
+      'text': messageText,
+      'timestamp': timestamp,
+    };
+    lastMessages.refresh();
+
+    // Reorder users by last message timestamp
+    _sortUsersByLastMessage();
   }
 
   Future<void> fetchUsers() async {
@@ -35,7 +104,7 @@ class UsersController extends GetxController {
 
       final response = await http.get(
         Uri.parse(
-          'http://192.168.1.6:3000/api/auth/users',
+          '${AppConfig.apiBaseUrl}/users',
         ), // Change to your backend URL
         headers: {
           'Authorization': 'Bearer $token',
@@ -80,7 +149,7 @@ class UsersController extends GetxController {
       for (final user in users) {
         try {
           final response = await http.get(
-            Uri.parse('http://192.168.1.6:3000/api/auth/messages/${user.id}'),
+            Uri.parse('${AppConfig.apiBaseUrl}/messages/${user.id}'),
             headers: {
               'Authorization': 'Bearer $token',
               'Content-Type': 'application/json',
@@ -158,5 +227,12 @@ class UsersController extends GetxController {
     });
 
     users.refresh();
+  }
+
+  @override
+  void onClose() {
+    _socketService.removeAllListeners();
+    _socketService.disconnect();
+    super.onClose();
   }
 }
