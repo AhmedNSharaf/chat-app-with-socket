@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../controllers/auth_controller.dart';
+import '../controllers/server_config_controller.dart';
+import '../config/app_config.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -12,6 +14,7 @@ class SplashScreen extends StatefulWidget {
 
 class _SplashScreenState extends State<SplashScreen> {
   final AuthController _authController = Get.put(AuthController());
+  final ServerConfigController _serverConfigController = Get.put(ServerConfigController());
 
   @override
   void initState() {
@@ -21,6 +24,23 @@ class _SplashScreenState extends State<SplashScreen> {
 
   void _navigateToNextScreen() async {
     await Future.delayed(const Duration(seconds: 2));
+
+    // Check if server URL is configured
+    final hasServerUrl = await _serverConfigController.hasServerUrl();
+
+    if (!hasServerUrl) {
+      // No server URL configured, go to server config screen
+      Get.offNamed('/server-config');
+      return;
+    }
+
+    // Load server URL from storage and set it in AppConfig
+    final savedServerUrl = await _serverConfigController.getSavedServerUrl();
+    if (savedServerUrl != null) {
+      AppConfig.setServerUrl(savedServerUrl);
+    }
+
+    // Check if user is logged in
     if (_authController.user.value != null) {
       Get.offNamed('/home');
     } else {

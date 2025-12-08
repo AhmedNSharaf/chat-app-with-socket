@@ -4,11 +4,14 @@ import '../config/app_config.dart';
 
 class SocketService {
   late IO.Socket socket;
-  final String serverUrl;
+  late String serverUrl;
 
   SocketService({
-    this.serverUrl = AppConfig.socketUrl,
-  });
+    String? serverUrl,
+  }) {
+    // Use provided serverUrl or get from AppConfig
+    this.serverUrl = serverUrl ?? AppConfig.socketUrl;
+  }
 
   void connect(String token) {
     socket = IO.io(serverUrl, <String, dynamic>{

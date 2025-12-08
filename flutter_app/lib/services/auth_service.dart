@@ -6,7 +6,8 @@ import '../models/user_model.dart';
 import '../config/app_config.dart';
 
 class AuthService {
-  static const String baseUrl = AppConfig.apiBaseUrl;
+  // Get base URL dynamically from AppConfig
+  static String get baseUrl => AppConfig.apiBaseUrl;
 
   // Register user
   Future<Map<String, dynamic>> register(

@@ -3,6 +3,7 @@ import 'package:flutter_app/screens/chat_screen_new.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
 import 'screens/splash_screen.dart';
+import 'screens/server_config_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/register_screen.dart';
 import 'screens/forgot_password_screen.dart';
@@ -40,9 +41,9 @@ class MyApp extends StatelessWidget {
               iconTheme: IconThemeData(color: Colors.white),
             ),
             textSelectionTheme: TextSelectionThemeData(
-              cursorColor: Colors.white,
-              selectionColor: Colors.white.withOpacity(0.3),
-              selectionHandleColor: Colors.white,
+              cursorColor: Colors.green,
+              selectionColor: Colors.green.withOpacity(0.3),
+              selectionHandleColor: Colors.green,
             ),
             bottomAppBarTheme: BottomAppBarThemeData(
               color: Colors.white,
@@ -54,6 +55,7 @@ class MyApp extends StatelessWidget {
           home: const SplashScreen(),
           getPages: [
             GetPage(name: '/splash', page: () => const SplashScreen()),
+            GetPage(name: '/server-config', page: () => ServerConfigScreen()),
             GetPage(name: '/login', page: () => LoginScreen()),
             GetPage(name: '/register', page: () => RegisterScreen()),
             GetPage(

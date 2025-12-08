@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:image_picker/image_picker.dart';
 import '../controllers/auth_controller.dart';
+import '../controllers/server_config_controller.dart';
 import '../config/app_config.dart';
 
 class ProfileScreen extends StatelessWidget {
@@ -10,6 +11,13 @@ class ProfileScreen extends StatelessWidget {
 
   final AuthController _authController = Get.find();
   final ImagePicker _picker = ImagePicker();
+
+  // Initialize ServerConfigController
+  void _initServerConfigController() {
+    if (!Get.isRegistered<ServerConfigController>()) {
+      Get.put(ServerConfigController());
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -228,6 +236,63 @@ class ProfileScreen extends StatelessWidget {
 
                         SizedBox(height: 40.h),
 
+                        // Settings Section
+                        Container(
+                          width: double.infinity,
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(16.r),
+                            border: Border.all(
+                              color: Colors.white.withValues(alpha: 0.3),
+                              width: 1.5,
+                            ),
+                          ),
+                          child: Column(
+                            children: [
+                              ListTile(
+                                leading: Container(
+                                  padding: EdgeInsets.all(8.w),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withValues(alpha: 0.15),
+                                    borderRadius: BorderRadius.circular(8.r),
+                                  ),
+                                  child: Icon(
+                                    Icons.dns_rounded,
+                                    color: Colors.white,
+                                    size: 20.sp,
+                                  ),
+                                ),
+                                title: Text(
+                                  'Server Configuration',
+                                  style: TextStyle(
+                                    fontSize: 16.sp,
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                                subtitle: Text(
+                                  AppConfig.serverUrl,
+                                  style: TextStyle(
+                                    fontSize: 12.sp,
+                                    color: Colors.white70,
+                                  ),
+                                ),
+                                trailing: Icon(
+                                  Icons.arrow_forward_ios_rounded,
+                                  color: Colors.white70,
+                                  size: 16.sp,
+                                ),
+                                onTap: () {
+                                  _initServerConfigController();
+                                  _showChangeServerDialog(context);
+                                },
+                              ),
+                            ],
+                          ),
+                        ),
+
+                        SizedBox(height: 20.h),
+
                         // Logout Button
                         Container(
                           width: double.infinity,
@@ -428,6 +493,157 @@ class ProfileScreen extends StatelessWidget {
         colorText: Colors.white,
       );
     }
+  }
+
+  void _showChangeServerDialog(BuildContext context) {
+    final TextEditingController urlController = TextEditingController(
+      text: AppConfig.serverUrl,
+    );
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          backgroundColor: const Color(0xFF075E54),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16.r),
+          ),
+          title: Row(
+            children: [
+              Icon(
+                Icons.dns_rounded,
+                color: Colors.white,
+                size: 24.sp,
+              ),
+              SizedBox(width: 12.w),
+              Text(
+                'Change Server',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 20.sp,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Enter new server URL',
+                style: TextStyle(
+                  color: Colors.white70,
+                  fontSize: 14.sp,
+                ),
+              ),
+              SizedBox(height: 12.h),
+              TextField(
+                controller: urlController,
+                decoration: InputDecoration(
+                  hintText: 'http://192.168.1.3:3000',
+                  hintStyle: TextStyle(
+                    color: Colors.white38,
+                    fontSize: 14.sp,
+                  ),
+                  filled: true,
+                  fillColor: Colors.white.withValues(alpha: 0.1),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8.r),
+                    borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.3)),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8.r),
+                    borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.3)),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8.r),
+                    borderSide: BorderSide(color: Colors.white, width: 2),
+                  ),
+                ),
+                style: TextStyle(color: Colors.white, fontSize: 14.sp),
+                keyboardType: TextInputType.url,
+                autocorrect: false,
+              ),
+              SizedBox(height: 12.h),
+              Container(
+                padding: EdgeInsets.all(8.w),
+                decoration: BoxDecoration(
+                  color: Colors.orange.shade900.withValues(alpha: 0.3),
+                  borderRadius: BorderRadius.circular(8.r),
+                  border: Border.all(
+                    color: Colors.orange.shade700.withValues(alpha: 0.5),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.warning_amber_rounded,
+                      color: Colors.orange.shade200,
+                      size: 18.sp,
+                    ),
+                    SizedBox(width: 8.w),
+                    Expanded(
+                      child: Text(
+                        'You will be logged out after changing the server',
+                        style: TextStyle(
+                          color: Colors.orange.shade100,
+                          fontSize: 11.sp,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              style: TextButton.styleFrom(
+                padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 12.h),
+              ),
+              child: Text(
+                'Cancel',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 16.sp,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                final newUrl = urlController.text.trim();
+                Navigator.pop(context);
+
+                // Save new server URL
+                final controller = Get.find<ServerConfigController>();
+                await controller.saveServerUrl(newUrl);
+
+                // Logout user
+                _authController.logout();
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF00A884),
+                padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 12.h),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12.r),
+                ),
+              ),
+              child: Text(
+                'Change',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 16.sp,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   void _showLogoutDialog(BuildContext context) {

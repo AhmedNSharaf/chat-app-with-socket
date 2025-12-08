@@ -12,8 +12,8 @@ const app = express();
 const server = http.createServer(app);
 const io = socketIo(server, {
   cors: {
-    origin: "*", // Allow all origins for development
-    methods: ["GET", "POST"]
+    origin: "*", // Allow all client origins for development
+    methods: ["GET", "POST"]// Allow GET and POST methods for three way handshake
   }
 });
 

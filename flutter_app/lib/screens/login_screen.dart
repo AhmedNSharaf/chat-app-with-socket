@@ -319,6 +319,20 @@ class _LoginScreenState extends State<LoginScreen>
                             ),
                           ),
                         ),
+                        TextButton(
+                          onPressed: () {
+                            Get.toNamed('/server-config');
+                          },
+                          child: Text(
+                            'Add Server URL',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 20.sp,
+                              decoration: TextDecoration.underline,
+                              decorationColor: Colors.white,
+                            ),
+                          ),
+                        ),
                       ],
                     ),
                   ),

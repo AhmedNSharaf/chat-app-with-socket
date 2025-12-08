@@ -69,7 +69,7 @@ function handleSocketConnection(io) {
           }
         }
       );
-
+      //How many messages were updated (delivered now).
       if (dmResult.modifiedCount > 0) {
         // Fetch updated messages to notify senders
         const deliveredMessages = await Message.find({
@@ -80,10 +80,12 @@ function handleSocketConnection(io) {
         // Group notifications by sender
         const senderNotifications = new Map();
         deliveredMessages.forEach(message => {
+          //So we can send one notification per sender efficiently instead of spam.
           const senderId = String(message.senderId);
           if (!senderNotifications.has(senderId)) {
             senderNotifications.set(senderId, []);
           }
+          //to push each delivered message info to the sender's notification list.
           senderNotifications.get(senderId).push({
             messageId: message._id.toString(),
             status: 'delivered',
@@ -92,12 +94,13 @@ function handleSocketConnection(io) {
         });
 
         // Emit status updates to senders
+        // update the ui of senders about delivery.
         senderNotifications.forEach((notifications, senderId) => {
           notifications.forEach(notification => {
             io.to(senderId).emit('message_status_update', notification);
           });
         });
-
+        // logging for debugging and production monitoring
         if (process.env.NODE_ENV === 'production') {
           console.log(`[Auto-Delivery] User ${socket.user.username}: ${dmResult.modifiedCount} DMs delivered`);
         } else {
@@ -135,7 +138,7 @@ function handleSocketConnection(io) {
               deliveredTo: [userId]
             });
           }
-
+          // logging for debugging and production monitoring
           if (process.env.NODE_ENV === 'production') {
             console.log(`[Auto-Delivery] User ${socket.user.username}: ${undeliveredGroupMessages.length} group messages delivered`);
           } else {
@@ -175,7 +178,7 @@ function handleSocketConnection(io) {
         });
       }
 
-      // Set away after 5 minutes of inactivity
+      // Set away after 2 minutes of inactivity
       activityTimer = setTimeout(async () => {
         await User.findOneAndUpdate(
           { id: socket.user.id },
@@ -187,7 +190,7 @@ function handleSocketConnection(io) {
           status: 'away',
           isOnline: true
         });
-      }, 5 * 60 * 1000); // 5 minutes
+      }, 2 * 60 * 1000); // 2 minutes
     };
 
     // Reset activity timer on user activity
@@ -324,7 +327,9 @@ function handleSocketConnection(io) {
           messageObj.timestamp = message.timestamp.toISOString();
 
           // Notify both users
+          //notify receiver
           io.to(String(message.receiverId)).emit('message_edited', messageObj);
+          //notify sender
           socket.emit('message_edited', messageObj);
         }
       } catch (error) {
@@ -368,10 +373,9 @@ function handleSocketConnection(io) {
       try {
         const message = await Message.findById(messageId);
         if (message) {
-          // Remove existing reaction from this user if any
+          // Remove existing reaction from this user if he has already reacted
           message.reactions = message.reactions.filter(r => r.userId !== socket.user.id);
-
-          // Add new reaction
+          //then add the new reaction
           message.reactions.push({
             userId: socket.user.id,
             emoji,
@@ -387,7 +391,9 @@ function handleSocketConnection(io) {
           };
 
           // Notify both users
+          // emitting to all sockets of the receiver if he has multiple connections
           io.to(String(message.receiverId)).emit('reaction_added', reactionData);
+          // emitting to all sockets of the sender if he has multiple connections
           io.to(String(message.senderId)).emit('reaction_added', reactionData);
         }
       } catch (error) {
@@ -411,7 +417,9 @@ function handleSocketConnection(io) {
           };
 
           // Notify both users
+          // emitting to all sockets of the receiver if he has multiple connections
           io.to(String(message.receiverId)).emit('reaction_removed', reactionData);
+          //emitting to all sockets of the sender if he has multiple connections
           io.to(String(message.senderId)).emit('reaction_removed', reactionData);
         }
       } catch (error) {
@@ -465,6 +473,7 @@ function handleSocketConnection(io) {
     // Leave group room
     socket.on('leave_group', (data) => {
       const { groupId } = data;
+      // make my socket leave the group room named with (`group_${groupId}`)
       socket.leave(`group_${groupId}`);
       console.log(`User ${socket.user.username} left group ${groupId}`);
     });

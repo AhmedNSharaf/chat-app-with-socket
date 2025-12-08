@@ -1,14 +1,18 @@
 /// Application configuration
 class AppConfig {
   // Server configuration
-  // Change this to your backend server IP address
-  static const String serverUrl = 'http://192.168.1.3:3000';
+  // This will be set dynamically by user input
+  static String _serverUrl = 'http://192.168.1.3:3000'; // Default fallback
 
-  // API endpoints
-  static const String apiBaseUrl = '$serverUrl/api/auth';
+  // Getters for server URLs
+  static String get serverUrl => _serverUrl;
+  static String get apiBaseUrl => '$_serverUrl/api/auth';
+  static String get socketUrl => _serverUrl;
 
-  // WebSocket configuration
-  static const String socketUrl = serverUrl;
+  // Method to set server URL dynamically
+  static void setServerUrl(String url) {
+    _serverUrl = url;
+  }
 
   // File upload configuration
   static const int maxFileSize = 10 * 1024 * 1024; // 10MB
@@ -40,6 +44,6 @@ class AppConfig {
   static String getMediaUrl(String? path) {
     if (path == null || path.isEmpty) return '';
     if (path.startsWith('http')) return path;
-    return '$serverUrl$path';
+    return '$_serverUrl$path';
   }
 }
