@@ -569,7 +569,7 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
       if (token == null) return [];
 
       final response = await http.get(
-        Uri.parse('${AppConfig.serverUrl}/api/users'),
+        Uri.parse('${AppConfig.serverUrl}/api/auth/users'),
         headers: {
           'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
@@ -670,7 +670,7 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
             'description': _descriptionController.text.trim(),
             'isPublic': isPublic.value,
             'allowMembersToAddOthers': allowMembersToAddOthers.value,
-            'members': selectedMembers,
+            'memberIds': selectedMembers,
           }),
         );
 

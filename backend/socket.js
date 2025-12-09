@@ -48,7 +48,8 @@ function handleSocketConnection(io) {
       console.error('Error updating user presence:', error);
     }
 
-    // Join user-specific room (convert to string for Socket.IO rooms)
+    // Add this socket to a private room named after the user's ID.
+    // This allows the server to send targeted events/messages directly to this user.
     socket.join(String(socket.user.id));
 
     // ============ AUTO-DELIVER PENDING MESSAGES ON CONNECTION ============
@@ -58,10 +59,12 @@ function handleSocketConnection(io) {
 
       // PART 1: Auto-deliver Direct Messages
       const dmResult = await Message.updateMany(
+        // Find messages sent to this user that are still 'sent'
         {
           receiverId: userId,
           status: 'sent'
         },
+        // Update status to 'delivered' and set deliveredAt to now
         {
           $set: {
             status: 'delivered',
@@ -77,7 +80,7 @@ function handleSocketConnection(io) {
           deliveredAt: now
         });
 
-        // Group notifications by sender
+        // Grouping notifications by sender
         const senderNotifications = new Map();
         deliveredMessages.forEach(message => {
           //So we can send one notification per sender efficiently instead of spam.
@@ -111,6 +114,7 @@ function handleSocketConnection(io) {
       // PART 2: Auto-deliver Group Messages
       // Find all groups where user is a member
       const userGroups = await Group.find({ members: userId });
+      // Extract every group IDs the user is part of
       const groupIds = userGroups.map(g => g._id);
 
       if (groupIds.length > 0) {
